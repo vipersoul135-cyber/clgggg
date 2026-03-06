@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>College Attendance System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Segoe UI, Arial;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
+        }
+
+
+
+        .hidden {
+            display: none;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        input {
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, .4);
+            background: rgba(255, 255, 255, .2);
+            color: #fff;
+            margin: 5px;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 100px;
+            background: #2563eb;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        .red {
+            background: #dc2626;
+        }
+
+        .green {
+            background: #16a34a;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th,
+        td {
+            padding: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, .3);
+            text-align: center;
+        }
+
+        th {
+            background: rgba(255, 255, 255, .15);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h2 class="center">College Attendance System</h2>
+
+        <!-- LOGIN -->
+
+        <section id="login">
+
+            <div class="center">
+                <input id="loginUser" placeholder="Username ">
+                <input id="loginPass" type="password" placeholder="Password ">
+            </div>
+
+            <div class="center">
+                <button onclick="login()">Login</button>
+            </div>
+
+            <div id="loginMsg" class="center" style="color:#ffb4b4"></div>
+
+        </section>
+
+
+        <!-- HOME -->
+
+        <section id="home" class="hidden center">
+
+            <h3 id="userInfo"></h3>
+
+            <button onclick="showSection('register')">Register Student</button>
+            <button onclick="showSection('attendance')">Attendance</button>
+            <button onclick="showSection('report')">Report</button>
+
+            <br><br>
+
+            <button class="red" onclick="logout()">Logout</button>
+
+        </section>
+
+
+        <!-- REGISTER -->
+
+        <section id="register" class="hidden center">
+
+            <h3>Register Student</h3>
+
+            <input id="studentName" placeholder="Student Name">
+            <input id="studentID" placeholder="Register Number">
+
+            <button onclick="addStudent()">Add</button>
+
+            <hr style="margin:20px 0">
+
+            <h4>Upload Excel </h4>
+
+            <input type="file" id="excelFile" accept=".xlsx,.xls">
+            <button onclick="uploadExcel()">Upload</button>
+
+            <br><br>
+
+            <button onclick="clearStudents()" class="red">Delete All Students</button>
+
+            <br><br>
+
+            <button class="red" onclick="showSection('home')">Back</button>
+
+        </section>
+
+
+        <!-- ATTENDANCE -->
+
+        <section id="attendance" class="hidden">
+
+            <h3 class="center">Attendance</h3>
+
+            <div class="center">
+                <input type="date" id="attendanceDate" onchange="renderAttendance()">
+            </div>
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Serial</th>
+                        <th>Register No</th>
+                        <th>Name</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody id="attendanceBody"></tbody>
+
+            </table>
+
+            <div class="center">
+                <button class="red" onclick="showSection('home')">Back</button>
+            </div>
+
+        </section>
+
+
+        <!-- REPORT -->
+
+        <section id="report" class="hidden">
+
+            <h3>Attendance Report</h3>
+
+            From <input type="date" id="fromDate">
+            To <input type="date" id="toDate">
+
+            <button onclick="generateReport()">Generate</button>
+            <button class="green" onclick="downloadReport()">Download Excel</button>
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Serial</th>
+                        <th>Register No</th>
+                        <th>Name</th>
+                        <th>Total Days</th>
+                        <th>Present</th>
+                        <th>Absent</th>
+                        <th>%</th>
+                    </tr>
+                </thead>
+
+                <tbody id="reportBody"></tbody>
+
+            </table>
+
+            <button class="red" onclick="showSection('home')">Back</button>
+
+        </section>
+
+    </div>
+
+
+    <script>
+
+        const departments = {
+            cs: "Computer Science",
+            it: "Information Technology",
+            tam: "Tamil",
+            eng: "English"
+        };
+
+        let currentUser = null;
+
+        let students = JSON.parse(localStorage.getItem("students")) || [];
+        let attendance = JSON.parse(localStorage.getItem("attendance")) || [];
+
+        function save() {
+
+            localStorage.setItem("students", JSON.stringify(students));
+            localStorage.setItem("attendance", JSON.stringify(attendance));
+
+        }
+
+        function showSection(id) {
+
+            ["login", "home", "register", "attendance", "report"]
+                .forEach(s => document.getElementById(s).classList.add("hidden"));
+
+            document.getElementById(id).classList.remove("hidden");
+
+            if (id === "attendance") {
+
+                const today = new Date().toISOString().split("T")[0];
+                document.getElementById("attendanceDate").value = today;
+
+                renderAttendance();
+
+            }
+
+        }
+
+        function login() {
+
+            let u = document.getElementById("loginUser").value.trim().toLowerCase();
+            let p = document.getElementById("loginPass").value.trim();
+
+            document.getElementById("loginMsg").innerText = "";
+
+            if (p !== "123") {
+                document.getElementById("loginMsg").innerText = "Wrong Password";
+                return;
+            }
+
+            let deptCode = u.slice(0, -1);
+            let year = u.slice(-1);
+
+            if (!departments[deptCode] || !["1", "2", "3"].includes(year)) {
+                document.getElementById("loginMsg").innerText = "Invalid Username";
+                return;
+            }
+
+            currentUser = {
+                dept: departments[deptCode],
+                year: year
+            };
+
+            document.getElementById("userInfo").innerText = currentUser.dept + " - " + year + " Year";
+
+            showSection("home");
+
+        }
+
+        function logout() {
+
+            currentUser = null;
+
+            showSection("login");
+
+        }
+
+        function addStudent() {
+
+            let name = document.getElementById("studentName").value.trim();
+            let id = document.getElementById("studentID").value.trim();
+
+            if (!name || !id) {
+                alert("Fill all fields");
+                return;
+            }
+
+            students.push({
+                serial: students.length + 1,
+                id: id,
+                name: name,
+                dept: currentUser.dept,
+                year: currentUser.year
+            });
+
+            save();
+
+            alert("Student Added");
+
+            document.getElementById("studentName").value = "";
+            document.getElementById("studentID").value = "";
+
+        }
+
+        function uploadExcel() {
+
+            const file = document.getElementById("excelFile").files[0];
+
+            if (!file) {
+                alert("Select Excel File");
+                return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: "array" });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+                for (let i = 1; i < rows.length; i++) {
+
+                    let regNo = rows[i][1];
+                    let name = rows[i][2];
+
+                    if (!regNo || !name) continue;
+
+                    students.push({
+                        serial: students.length + 1,
+                        id: regNo.toString(),
+                        name: name.toString(),
+                        dept: currentUser.dept,
+                        year: currentUser.year
+                    });
+
+                }
+
+                save();
+
+                alert("Students Imported");
+
+            };
+
+            reader.readAsArrayBuffer(file);
+
+        }
+
+        function clearStudents() {
+
+            if (confirm("Delete all students?")) {
+
+                students = students.filter(s =>
+                    !(s.dept === currentUser.dept && s.year === currentUser.year)
+                );
+
+                save();
+
+                alert("Deleted");
+
+            }
+
+        }
+
+        function renderAttendance() {
+
+            let date = document.getElementById("attendanceDate").value;
+
+            if (!date) return;
+
+            let body = document.getElementById("attendanceBody");
+
+            body.innerHTML = "";
+
+            let filtered = students.filter(s =>
+                s.dept === currentUser.dept && s.year === currentUser.year
+            );
+
+            filtered.forEach(s => {
+
+                let absent = attendance.find(a => a.id === s.id && a.date === date);
+
+                body.innerHTML += `
+<tr>
+<td>${s.serial}</td>
+<td>${s.id}</td>
+<td>${s.name}</td>
+<td>
+<input type="radio" name="att_${s.id}" ${!absent ? "checked" : ""}
+onclick="markAttendance('${s.id}','${date}','present')"> Present
+
+<input type="radio" name="att_${s.id}" ${absent ? "checked" : ""}
+onclick="markAttendance('${s.id}','${date}','absent')"> Absent
+</td>
+</tr>
+`;
+
+            });
+
+        }
+
+        function markAttendance(id, date, status) {
+
+            attendance = attendance.filter(a => !(a.id === id && a.date === date));
+
+            if (status === "absent") {
+                attendance.push({ id, date });
+            }
+
+            save();
+
+        }
+
+        function generateReport() {
+
+            let from = document.getElementById("fromDate").value;
+            let to = document.getElementById("toDate").value;
+
+            if (!from || !to) {
+                alert("Select dates");
+                return;
+            }
+
+            let body = document.getElementById("reportBody");
+            body.innerHTML = "";
+
+            let days = new Set(
+                attendance.filter(a => a.date >= from && a.date <= to).map(a => a.date)
+            );
+
+            let total = days.size;
+
+            students.filter(s => s.dept === currentUser.dept && s.year === currentUser.year)
+                .forEach(s => {
+
+                    let absent = attendance.filter(a =>
+                        a.id === s.id && a.date >= from && a.date <= to
+                    ).length;
+
+                    let present = total - absent;
+
+                    let percent = total ? Math.round((present / total) * 100) : 100;
+
+                    body.innerHTML += `
+<tr>
+<td>${s.serial}</td>
+<td>${s.id}</td>
+<td>${s.name}</td>
+<td>${total}</td>
+<td>${present}</td>
+<td>${absent}</td>
+<td>${percent}%</td>
+</tr>
+`;
+
+                });
+
+        }
+
+        function downloadReport() {
+
+            let table = document.querySelector("#report table");
+
+            let wb = XLSX.utils.table_to_book(table, { sheet: "Report" });
+
+            XLSX.writeFile(wb, "Attendance_Report.xlsx");
+
+        }
+
+    </script>
+
+</body>
+
+</html>
