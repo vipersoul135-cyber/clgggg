@@ -16,7 +16,16 @@
             min-height: 100vh;
         }
 
-
+        .container {
+            max-width: 950px;
+            margin: 25px auto;
+            padding: 20px;
+            background: #ffffff15;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, .3);
+            color: #fff;
+        }
 
         .hidden {
             display: none;
@@ -80,12 +89,10 @@
         <h2 class="center">College Attendance System</h2>
 
         <!-- LOGIN -->
-
         <section id="login">
-
             <div class="center">
-                <input id="loginUser" placeholder="Username ">
-                <input id="loginPass" type="password" placeholder="Password ">
+                <input id="loginUser" placeholder="Username (ex: cs1)">
+                <input id="loginPass" type="password" placeholder="Password (123)">
             </div>
 
             <div class="center">
@@ -93,42 +100,31 @@
             </div>
 
             <div id="loginMsg" class="center" style="color:#ffb4b4"></div>
-
         </section>
 
-
         <!-- HOME -->
-
         <section id="home" class="hidden center">
-
             <h3 id="userInfo"></h3>
 
             <button onclick="showSection('register')">Register Student</button>
             <button onclick="showSection('attendance')">Attendance</button>
             <button onclick="showSection('report')">Report</button>
 
-            <br><br>
-
             <button class="red" onclick="logout()">Logout</button>
-
         </section>
 
-
         <!-- REGISTER -->
-
         <section id="register" class="hidden center">
 
             <h3>Register Student</h3>
 
             <input id="studentName" placeholder="Student Name">
             <input id="studentID" placeholder="Register Number">
-
             <button onclick="addStudent()">Add</button>
 
             <hr style="margin:20px 0">
 
-            <h4>Upload Excel </h4>
-
+            <h4>Upload Excel (Serial | Reg No | Name)</h4>
             <input type="file" id="excelFile" accept=".xlsx,.xls">
             <button onclick="uploadExcel()">Upload</button>
 
@@ -137,14 +133,11 @@
             <button onclick="clearStudents()" class="red">Delete All Students</button>
 
             <br><br>
-
             <button class="red" onclick="showSection('home')">Back</button>
 
         </section>
 
-
         <!-- ATTENDANCE -->
-
         <section id="attendance" class="hidden">
 
             <h3 class="center">Attendance</h3>
@@ -154,7 +147,6 @@
             </div>
 
             <table>
-
                 <thead>
                     <tr>
                         <th>Serial</th>
@@ -174,9 +166,7 @@
 
         </section>
 
-
         <!-- REPORT -->
-
         <section id="report" class="hidden">
 
             <h3>Attendance Report</h3>
@@ -211,7 +201,6 @@
 
     </div>
 
-
     <script>
 
         const departments = {
@@ -227,10 +216,8 @@
         let attendance = JSON.parse(localStorage.getItem("attendance")) || [];
 
         function save() {
-
             localStorage.setItem("students", JSON.stringify(students));
             localStorage.setItem("attendance", JSON.stringify(attendance));
-
         }
 
         function showSection(id) {
@@ -243,10 +230,10 @@
             if (id === "attendance") {
 
                 const today = new Date().toISOString().split("T")[0];
+
                 document.getElementById("attendanceDate").value = today;
 
                 renderAttendance();
-
             }
 
         }
@@ -255,8 +242,6 @@
 
             let u = document.getElementById("loginUser").value.trim().toLowerCase();
             let p = document.getElementById("loginPass").value.trim();
-
-            document.getElementById("loginMsg").innerText = "";
 
             if (p !== "123") {
                 document.getElementById("loginMsg").innerText = "Wrong Password";
@@ -292,8 +277,8 @@
 
         function addStudent() {
 
-            let name = document.getElementById("studentName").value.trim();
-            let id = document.getElementById("studentID").value.trim();
+            let name = document.getElementById("studentName").value;
+            let id = document.getElementById("studentID").value;
 
             if (!name || !id) {
                 alert("Fill all fields");
@@ -302,8 +287,8 @@
 
             students.push({
                 serial: students.length + 1,
-                id: id,
-                name: name,
+                id: id.trim(),
+                name: name.trim(),
                 dept: currentUser.dept,
                 year: currentUser.year
             });
@@ -384,6 +369,14 @@
 
             if (!date) return;
 
+            let today = new Date().toISOString().split("T")[0];
+
+            if (date > today) {
+                alert("Future attendance not allowed");
+                document.getElementById("attendanceDate").value = today;
+                date = today;
+            }
+
             let body = document.getElementById("attendanceBody");
 
             body.innerHTML = "";
@@ -402,11 +395,8 @@
 <td>${s.id}</td>
 <td>${s.name}</td>
 <td>
-<input type="radio" name="att_${s.id}" ${!absent ? "checked" : ""}
-onclick="markAttendance('${s.id}','${date}','present')"> Present
-
-<input type="radio" name="att_${s.id}" ${absent ? "checked" : ""}
-onclick="markAttendance('${s.id}','${date}','absent')"> Absent
+<input type="radio" name="att_${s.id}" ${!absent ? "checked" : ""} onclick="markAttendance('${s.id}','${date}','present')"> Present
+<input type="radio" name="att_${s.id}" ${absent ? "checked" : ""} onclick="markAttendance('${s.id}','${date}','absent')"> Absent
 </td>
 </tr>
 `;
@@ -438,10 +428,12 @@ onclick="markAttendance('${s.id}','${date}','absent')"> Absent
             }
 
             let body = document.getElementById("reportBody");
+
             body.innerHTML = "";
 
             let days = new Set(
-                attendance.filter(a => a.date >= from && a.date <= to).map(a => a.date)
+                attendance.filter(a => a.date >= from && a.date <= to)
+                    .map(a => a.date)
             );
 
             let total = days.size;
